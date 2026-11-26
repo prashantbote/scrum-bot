@@ -1,0 +1,8 @@
+{% extends "_layout.html.j2" %}
+{% block body %}
+<h1 style="font-size:20px;line-height:28px;margin:4px 0 8px">We missed you at today's {{ team_name }} standup</h1>
+<p style="margin:0 0 10px">Hi {{ first_name }}, send your update in under a minute — it goes into today's report.</p>
+<ol style="margin:0 0 14px;padding-left:18px;color:#5f6b7a">{% for q in questions %}<li>{{ q }}</li>{% endfor %}</ol>
+<a href="{{ url }}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-weight:600">Send my update</a>
+{% endblock %}
+{% block footer %}The check-in closes at {{ closes_at }}.{% endblock %}

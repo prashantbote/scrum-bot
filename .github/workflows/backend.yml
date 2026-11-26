@@ -1,0 +1,64 @@
+name: backend
+
+on:
+  pull_request:
+    paths: ["backend/**", "infra/postgres/**"]
+  push:
+    branches: [main]
+    paths: ["backend/**", "infra/postgres/**"]
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: scrum, POSTGRES_PASSWORD: scrum, POSTGRES_DB: scrum_test }
+        ports: ["55432:5432"]
+        options: --health-cmd "pg_isready -U scrum" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - name: App role (no BYPASSRLS)
+        run: |
+          PGPASSWORD=scrum psql -h localhost -p 55432 -U scrum -d scrum_test -c \
+            "CREATE ROLE scrum_app LOGIN PASSWORD 'scrum_app' NOSUPERUSER NOBYPASSRLS;"
+      - run: uv run ruff check .
+      - run: uv run ruff format --check packages services scripts tests
+      - run: uv run lint-imports
+      - run: uv run mypy packages services
+      - name: Migrations upgrade/downgrade + drift
+        env: { ALEMBIC_DATABASE_URL: "postgresql+asyncpg://scrum:scrum@localhost:55432/scrum_test" }
+        run: |
+          uv run alembic upgrade head && uv run alembic downgrade base && uv run alembic upgrade head
+          uv run alembic check
+      - name: Tests (unit, RLS, API, Temporal workflow E2E, heuristic evals)
+        run: uv run pytest -m "not llm and not voice_models"
+      - name: OpenAPI drift
+        run: uv run python scripts/export_openapi.py --check
+      - name: Dependency audit
+        run: uvx pip-audit --strict -r <(uv export --frozen --no-dev --no-hashes) || true
+
+  evals:
+    # Re-run the open-source LLM evals when prompts or extraction code change (needs a GPU runner + Ollama).
+    if: false
+    runs-on: [self-hosted, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - run: uv sync --frozen && uv run pytest tests/evals -m llm -s
+
+  images:
+    needs: ci
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: { target: [api, worker, voice] }
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f docker/Dockerfile --target ${{ matrix.target }} -t scrum-bot/${{ matrix.target }}:ci .
+      - uses: aquasecurity/trivy-action@0.28.0
+        with: { image-ref: "scrum-bot/${{ matrix.target }}:ci", severity: "CRITICAL,HIGH", exit-code: "0" }

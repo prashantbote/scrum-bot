@@ -1,0 +1,40 @@
+{% extends "_layout.html.j2" %}
+{% macro chip(k) %}<span style="font-family:ui-monospace,Consolas,monospace;font-size:12px;border:1px solid #e2e6ea;background:#f9fafb;border-radius:4px;padding:0 4px">{{ k }}</span>{% endmacro %}
+{% macro items(label, rows) %}{% if rows %}
+<div style="margin-top:6px"><div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#5f6b7a">{{ label }}</div>
+<ul style="margin:2px 0 0;padding-left:18px">{% for i in rows %}<li>{{ i.summary }}{% if i.status == "in_progress" %} <span style="color:#5f6b7a">(in progress)</span>{% endif %} {% for k in i.ticket_keys %}{{ chip(k) }} {% endfor %}</li>{% endfor %}</ul></div>
+{% endif %}{% endmacro %}
+{% block body %}
+<h1 style="font-size:20px;line-height:28px;margin:4px 0 2px">{{ team_name }}</h1>
+<div style="color:#5f6b7a">{{ date_long }} · {{ attended }}/{{ total }} attended{% if async_count %} ({{ async_count }} async){% endif %}</div>
+
+{% if blockers %}
+<div style="margin:16px 0;border:1px solid #f5c2bd;background:#fdecea;border-radius:6px;padding:12px 14px">
+  <div style="font-weight:600;color:#b42318">Blockers ({{ blockers|length }})</div>
+  <ul style="margin:6px 0 0;padding-left:18px">{% for b in blockers %}
+    <li><b>{{ b.who }}</b>: {{ b.description }}{% if b.blocked_on %} — waiting on {{ b.blocked_on }}{% endif %} {% for k in b.ticket_keys %}{{ chip(k) }} {% endfor %}{% if b.repeat %} <span style="color:#5f6b7a">(day {{ b.days_open + 1 }})</span>{% endif %}</li>
+  {% endfor %}</ul>
+</div>
+{% else %}
+<div style="margin:16px 0;border:1px solid #e2e6ea;background:#e6f4f2;border-radius:6px;padding:10px 14px;color:#0a655d">No blockers reported.</div>
+{% endif %}
+
+{% if dependencies %}
+<div style="margin:0 0 16px;border:1px solid #e2e6ea;background:#eaf1fe;border-radius:6px;padding:10px 14px">
+  <div style="font-weight:600;color:#1d4ed8">Dependencies</div>
+  <ul style="margin:6px 0 0;padding-left:18px">{% for d in dependencies %}<li><b>{{ d.who }}</b> needs {{ d.on }}: {{ d.description }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% for u in updates %}
+<div style="border:1px solid #e2e6ea;border-radius:6px;padding:12px 14px;margin-bottom:10px;background:#fff">
+  <div style="font-weight:600">{{ u.name }} <span style="font-weight:500;font-size:12px;color:{{ '#1d4ed8' if u.source == 'async' else '#0a655d' }}">{{ 'Async' if u.source == 'async' else 'Present' }}</span></div>
+  {{ items("Done", u.completed) }}{{ items("Today", u.planned) }}
+  {% if u.blockers %}{{ items("Blockers", u.blockers) }}{% endif %}
+  {% if u.challenges %}<div style="margin-top:6px;color:#5f6b7a">Challenges: {{ u.challenges|join("; ") }}</div>{% endif %}
+</div>
+{% endfor %}
+
+{% if absent %}<div style="color:#5f6b7a">Absent: {{ absent|join(", ") }}</div>{% endif %}
+<div style="margin-top:12px"><a href="{{ app_url }}" style="color:#2563eb">Open the full report and transcript in Scrum Bot</a></div>
+{% endblock %}

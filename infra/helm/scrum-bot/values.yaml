@@ -1,0 +1,38 @@
+image:
+  registry: ghcr.io/your-org
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Non-secret config (SCRUM_*). Secrets (DB URLs, SCRUM_ACTION_TOKEN_SECRET, SCRUM_KEK_BASE64, LLM/LiveKit keys)
+# come from an existing Secret, ideally synced from OpenBao/Vault by the CSI driver or external-secrets.
+env:
+  SCRUM_ENV: prod
+  SCRUM_AUTH_MODE: oidc
+  SCRUM_TEMPORAL_ADDRESS: temporal-frontend.temporal:7233
+  SCRUM_LLM_BASE_URL: http://vllm.llm:8000/v1
+  SCRUM_EMBED_PROVIDER: openai_compat
+  SCRUM_MAIL_PROVIDER: smtp
+  SCRUM_BLOB_BACKEND: s3
+secretName: scrum-bot-secrets
+
+api:
+  replicas: 2
+  resources: { requests: { cpu: 250m, memory: 384Mi }, limits: { memory: 768Mi } }
+  hpa: { min: 2, max: 10, cpu: 70 }
+
+workers:
+  orchestrator: { replicas: 1, roles: [orchestrator], resources: { requests: { cpu: 100m, memory: 256Mi } } }
+  intelligence: { replicas: 1, roles: [intelligence], resources: { requests: { cpu: 250m, memory: 512Mi } } }
+  delivery:     { replicas: 1, roles: [delivery], resources: { requests: { cpu: 100m, memory: 384Mi } } }
+
+voice:
+  # Dedicated, tainted node pool (plan §8.3). 4 concurrent calls per pod.
+  nodeSelector: { pool: voice }
+  tolerations: [{ key: dedicated, value: voice, effect: NoSchedule }]
+  resources: { requests: { cpu: "2", memory: 3Gi }, limits: { memory: 4Gi } }
+  keda:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 20
+    targetQueueSize: "4"         # backlog per pod on the voice-agents task queue
+    prewarmCron: "50 3 * * 1-5"  # UTC: 10 min before the 09:30 IST peak

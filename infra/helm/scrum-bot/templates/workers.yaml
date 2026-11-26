@@ -1,0 +1,59 @@
+{{- range $name, $w := .Values.workers }}
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: scrum-{{ $name }}-worker, labels: { app: scrum-{{ $name }}-worker } }
+spec:
+  replicas: {{ $w.replicas }}
+  selector: { matchLabels: { app: scrum-{{ $name }}-worker } }
+  template:
+    metadata: { labels: { app: scrum-{{ $name }}-worker } }
+    spec:
+      securityContext: { runAsNonRoot: true }
+      containers:
+        - name: worker
+          image: "{{ $.Values.image.registry }}/scrum-bot-worker:{{ $.Values.image.tag }}"
+          args: {{ prepend $w.roles "scrum-worker" | toJson }}
+          {{- include "scrum.env" $ | nindent 10 }}
+          resources: {{ toYaml $w.resources | nindent 12 }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: scrum-voice-worker, labels: { app: scrum-voice-worker } }
+spec:
+  selector: { matchLabels: { app: scrum-voice-worker } }
+  template:
+    metadata: { labels: { app: scrum-voice-worker } }
+    spec:
+      nodeSelector: {{ toYaml .Values.voice.nodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .Values.voice.tolerations | nindent 8 }}
+      terminationGracePeriodSeconds: 900   # let in-flight calls finish
+      containers:
+        - name: voice
+          image: "{{ .Values.image.registry }}/scrum-bot-voice:{{ .Values.image.tag }}"
+          {{- include "scrum.env" . | nindent 10 }}
+          resources: {{ toYaml .Values.voice.resources | nindent 12 }}
+{{- if .Values.voice.keda.enabled }}
+---
+# KEDA: scale on the voice-agents Temporal task-queue backlog + scheduled pre-warm (plan §8.3).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata: { name: scrum-voice-worker }
+spec:
+  scaleTargetRef: { name: scrum-voice-worker }
+  minReplicaCount: {{ .Values.voice.keda.minReplicas }}
+  maxReplicaCount: {{ .Values.voice.keda.maxReplicas }}
+  triggers:
+    - type: temporal
+      metadata:
+        endpoint: {{ .Values.env.SCRUM_TEMPORAL_ADDRESS | quote }}
+        namespace: default
+        taskQueue: voice-agents
+        targetQueueSize: {{ .Values.voice.keda.targetQueueSize | quote }}
+    - type: cron
+      metadata:
+        timezone: UTC
+        start: {{ .Values.voice.keda.prewarmCron | quote }}
+        end: "0 6 * * 1-5"
+        desiredReplicas: "4"
+{{- end }}

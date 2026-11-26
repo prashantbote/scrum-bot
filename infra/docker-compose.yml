@@ -1,0 +1,95 @@
+# Local open-source stack for Scrum Bot (plan §13). `make -C backend dev` starts it.
+#
+#   postgres  pgvector/pgvector:pg16   :55432  (owner "scrum", app role "scrum_app" without BYPASSRLS)
+#   redis     redis:7                  :6379   rate limits + burndown cache
+#   temporal  Temporal dev server      :7233   (Web UI :8233)
+#   mailpit   SMTP sink + web UI       :1025 / :8025
+#   seaweedfs S3-compatible blobs      :8333   (Apache-2.0; MinIO no longer ships community images)
+#   ollama    run natively (`ollama serve`) or use the `llm` profile below
+#   livekit   WebRTC SFU for the voice bot (`--profile voice`)
+#   keycloak  OIDC identity provider (`--profile auth`)
+#
+# Application services (api + workers) run from source with hot reload via `make run`,
+# or as containers with `--profile app`.
+
+name: scrum-bot
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: scrum
+      POSTGRES_PASSWORD: scrum
+      POSTGRES_DB: scrum
+    ports: ["55432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scrum -d scrum"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  temporal:
+    image: temporalio/temporal:latest
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--ui-port", "8233", "--db-filename", "/data/temporal.db"]
+    user: "0:0"  # dev only: lets the dev server persist its SQLite file in the named volume
+    ports: ["7233:7233", "8233:8233"]
+    volumes: [temporaldata:/data]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["1025:1025", "8025:8025"]
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333"]
+    ports: ["8333:8333"]
+    volumes: [s3data:/data]
+
+  ollama:
+    profiles: ["llm"]
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: [ollama:/root/.ollama]
+
+  livekit:
+    profiles: ["voice"]
+    image: livekit/livekit-server:latest
+    # --node-ip 127.0.0.1 so browsers on this machine can reach WebRTC media from Docker Desktop.
+    command: ["--dev", "--bind", "0.0.0.0", "--node-ip", "127.0.0.1"]  # API key "devkey", secret "secret"
+    ports: ["7880:7880", "7881:7881", "7882:7882/udp"]
+
+  keycloak:
+    profiles: ["auth"]
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports: ["8180:8080"]
+    volumes: ["./keycloak/scrum-bot-realm.json:/opt/keycloak/data/import/scrum-bot-realm.json:ro"]
+
+  api:
+    profiles: ["app"]
+    build: { context: ../backend, dockerfile: docker/Dockerfile, target: api }
+    env_file: ../backend/.env.docker
+    ports: ["8800:8800"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  worker:
+    profiles: ["app"]
+    build: { context: ../backend, dockerfile: docker/Dockerfile, target: worker }
+    env_file: ../backend/.env.docker
+    command: ["scrum-worker", "all"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+volumes:
+  pgdata: {}
+  temporaldata: {}
+  s3data: {}
+  ollama: {}

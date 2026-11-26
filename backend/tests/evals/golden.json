@@ -1,0 +1,108 @@
+[
+  {
+    "name": "rahul-tuesday-sandbox-credentials",
+    "member": "Rahul Verma",
+    "lines": [
+      ["bot", 1, "Rahul, yesterday you were working on PROJ-142, the refund API. How did that go?"],
+      ["member", 1, "I finished the main logic, but the testing isn't done."],
+      ["bot", 3, "Got it. Will testing finish today, or is anything stopping it?"],
+      ["member", 3, "I need the sandbox credentials from Amit, so I'm stuck."],
+      ["bot", 2, "What's your plan for today?"],
+      ["member", 2, "Finish the refund API tests as soon as I have the credentials."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-142"], "blockers": [{"on": "Amit", "tickets": ["PROJ-142"]}], "dependencies": 0}
+  },
+  {
+    "name": "priya-review-repeat",
+    "member": "Priya Nair",
+    "lines": [
+      ["bot", 1, "Priya, what did you complete yesterday?"],
+      ["member", 1, "Payment UI error states for PROJ-150."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "The accessibility pass on PROJ-150."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "Still waiting for a code review on PROJ-150. Arjun said he'd look at it."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-150"], "blockers": [{"on": "Arjun", "tickets": ["PROJ-150"]}], "dependencies": 0}
+  },
+  {
+    "name": "no-blockers-plain",
+    "member": "Amit Sharma",
+    "lines": [
+      ["bot", 1, "Amit, you had PROJ-138 in progress. How did yesterday go?"],
+      ["member", 1, "I fixed the staging migration ordering for PROJ-138."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "Rotate the sandbox credentials, that's BE-210."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "No blockers today."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-138"], "blockers": [], "dependencies": 0}
+  },
+  {
+    "name": "dependency-not-blocker",
+    "member": "Sneha Joshi",
+    "lines": [
+      ["bot", 1, "Sneha, what did you complete yesterday?"],
+      ["member", 1, "Settlement report CSV export, PROJ-155."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "Settlement report filters."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "No blockers, but I depend on Meera for the settlement schema sign-off."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-155"], "blockers": [], "dependencies": 1}
+  },
+  {
+    "name": "indian-english-team-blocker",
+    "member": "Karan Mehta",
+    "lines": [
+      ["bot", 1, "Karan, what did you complete yesterday?"],
+      ["member", 1, "Yesterday I have completed the payout matching rules only, PROJ-158."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "Today I will do the payouts integration with v2 API, PROJ-160."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "Waiting on the API contract from the backend team itself for PROJ-160."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-158"], "blockers": [{"on": "backend team", "tickets": ["PROJ-160"]}], "dependencies": 0}
+  },
+  {
+    "name": "code-switching-hinglish",
+    "member": "Rahul Verma",
+    "lines": [
+      ["bot", 1, "Rahul, what did you complete yesterday?"],
+      ["member", 1, "Kal maine webhook retry integration finish kiya, PROJ-138."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "Aaj refund API load test karunga, PROJ-142."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "Nahi, no blockers."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-138"], "blockers": [], "dependencies": 0}
+  },
+  {
+    "name": "vague-then-specific",
+    "member": "Priya Nair",
+    "lines": [
+      ["bot", 1, "Priya, what did you complete yesterday?"],
+      ["member", 1, "Some stuff."],
+      ["bot", 1, "Which ticket or task was that, specifically?"],
+      ["member", 1, "The invoice PDF layout, PROJ-147."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "Invoice PDF totals on PROJ-147."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "Nothing blocking."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-147"], "blockers": [], "dependencies": 0}
+  },
+  {
+    "name": "staging-blocker-no-person",
+    "member": "Amit Sharma",
+    "lines": [
+      ["bot", 1, "Amit, what did you complete yesterday?"],
+      ["member", 1, "Webhook signature validation, PROJ-138."],
+      ["bot", 2, "What will you work on today?"],
+      ["member", 2, "Deploy PROJ-138 to staging."],
+      ["bot", 3, "Any blockers or dependencies?"],
+      ["member", 3, "Staging migrations are failing, so I can't deploy PROJ-138. DevOps is looking at it."]
+    ],
+    "expect": {"completed_tickets": ["PROJ-138"], "blockers": [{"on": null, "tickets": ["PROJ-138"]}], "dependencies": 0}
+  }
+]

@@ -1,0 +1,14 @@
+{% extends "_layout.html.j2" %}
+{% block body %}
+<h1 style="font-size:20px;line-height:28px;margin:4px 0 8px">{{ reporter }} is blocked and waiting on you</h1>
+<div style="border:1px solid #e2e6ea;border-radius:6px;padding:12px 14px;background:#fff">
+  <div style="font-weight:600">{{ description }}</div>
+  <div style="color:#5f6b7a;margin-top:2px">{{ team_name }} standup · {{ date_long }}{% for k in ticket_keys %} · <span style="font-family:ui-monospace,Consolas,monospace">{{ k }}</span>{% endfor %}</div>
+  {% if quote %}<blockquote style="margin:10px 0 0;padding:6px 10px;border-left:3px solid #14b8a6;background:#e6f4f2;color:#1f2933">“{{ quote }}” — {{ reporter }}</blockquote>{% endif %}
+</div>
+<div style="margin-top:16px">
+  <a href="{{ ack_url }}" style="display:inline-block;background:#0d7c72;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-weight:600">Acknowledge</a>
+  <a href="{{ resolve_url }}" style="display:inline-block;margin-left:8px;background:#fff;color:#0a655d;border:1px solid #0d7c72;text-decoration:none;border-radius:6px;padding:7px 14px;font-weight:600">Mark as resolved</a>
+</div>
+{% endblock %}
+{% block footer %}You're receiving this because {{ reporter }} named you in today's standup. Links expire in {{ ttl_days }} days.{% endblock %}

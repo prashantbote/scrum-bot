@@ -1,0 +1,11 @@
+{% extends "_layout.html.j2" %}
+{% block body %}
+<h1 style="font-size:20px;line-height:28px;margin:4px 0 8px">A blocker has been open for {{ days_open }} standup days</h1>
+<div style="border:1px solid #f5c2bd;background:#fdecea;border-radius:6px;padding:12px 14px">
+  <div style="font-weight:600;color:#b42318">{{ description }}</div>
+  <div style="color:#5f6b7a;margin-top:2px">Raised by {{ reporter }}{% if blocked_on %} · waiting on {{ blocked_on }}{% endif %}{% for k in ticket_keys %} · {{ k }}{% endfor %}</div>
+</div>
+<div style="margin-top:12px;font-weight:600">History</div>
+<ul style="margin:4px 0 0;padding-left:18px">{% for e in events %}<li>{{ e.at }} — {{ e.kind }}{% if e.note %}: {{ e.note }}{% endif %}</li>{% endfor %}</ul>
+<div style="margin-top:14px"><a href="{{ app_url }}" style="color:#2563eb">Open the blocker in Scrum Bot</a></div>
+{% endblock %}

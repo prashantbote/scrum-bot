@@ -1,0 +1,149 @@
+[project]
+name = "scrum-bot-backend"
+version = "0.1.0"
+description = "Scrum Bot backend: config API, Temporal workflows, voice agent, intelligence and delivery (open-source stack)."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "email-validator>=2.2",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "asyncpg>=0.30",
+  "alembic>=1.14",
+  "pgvector>=0.3.6",
+  "temporalio>=1.9",
+  "httpx>=0.28",
+  "pyjwt[crypto]>=2.10",
+  "cryptography>=44",
+  "rapidfuzz>=3.10",
+  "jinja2>=3.1",
+  "aiosmtplib>=3.0",
+  "croniter>=5.0",
+  "holidays>=0.62",
+  "tzdata>=2024.2",
+  "redis>=5.2",
+  "minio>=7.2",
+]
+
+[project.optional-dependencies]
+# Open-source voice stack: LiveKit (WebRTC SFU), faster-whisper (STT), Piper (TTS), Silero VAD (ONNX).
+voice = [
+  "livekit>=0.18",
+  "livekit-api>=0.8",
+  "faster-whisper>=1.1",
+  "piper-tts>=1.2",
+  "numpy>=1.26",
+  "onnxruntime>=1.20",
+]
+# PDF digests. Needs Pango (installed in the Docker image; on Windows install GTK3 runtime).
+pdf = ["weasyprint>=63"]
+otel = [
+  "opentelemetry-sdk>=1.28",
+  "opentelemetry-exporter-otlp>=1.28",
+  "opentelemetry-instrumentation-fastapi>=0.49b0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "respx>=0.21",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "import-linter>=2.1",
+]
+
+[project.scripts]
+scrum-api = "scrum_api.main:run"
+scrum-worker = "scrum_runtime.worker:main"
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# One distribution, one lockfile; layering is enforced by import-linter (see below).
+packages = [
+  "packages/core/scrum_core",
+  "packages/adapters/scrum_adapters",
+  "services/api/scrum_api",
+  "services/orchestrator/scrum_orchestrator",
+  "services/voice_agent/scrum_voice",
+  "services/intelligence/scrum_intelligence",
+  "services/delivery/scrum_delivery",
+  "services/runtime/scrum_runtime",
+]
+
+[tool.hatch.build.targets.wheel.force-include]
+"services/voice_agent/scrum_voice/prompts" = "scrum_voice/prompts"
+"services/intelligence/scrum_intelligence/prompts" = "scrum_intelligence/prompts"
+"services/delivery/scrum_delivery/templates" = "scrum_delivery/templates"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = [
+  "db: needs PostgreSQL (SCRUM_TEST_DATABASE_URL); skipped when unreachable",
+  "temporal: starts a Temporal test server (downloads the binary on first run)",
+  "llm: calls the local open-source LLM (Ollama); skipped when unreachable",
+  "voice_models: needs the [voice] extra and downloaded Whisper/Piper models",
+]
+filterwarnings = ["ignore::DeprecationWarning:holidays.*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["packages/core", "packages/adapters", "services/api", "services/orchestrator", "services/voice_agent", "services/intelligence", "services/delivery", "services/runtime", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "RUF"]
+ignore = ["S101", "S311", "B008", "RUF012", "S608"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "E501", "B017", "RUF001"]
+"scripts/**" = ["S105", "S106", "E501"]
+"migrations/versions/**" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+mypy_path = "packages/core:packages/adapters:services/api:services/orchestrator:services/voice_agent:services/intelligence:services/delivery:services/runtime"
+explicit_package_bases = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["scrum_core.*", "scrum_adapters.*"]
+strict = true
+
+[tool.importlinter]
+root_packages = [
+  "scrum_runtime",
+  "scrum_core",
+  "scrum_adapters",
+  "scrum_api",
+  "scrum_orchestrator",
+  "scrum_voice",
+  "scrum_intelligence",
+  "scrum_delivery",
+]
+
+[[tool.importlinter.contracts]]
+name = "Layers: services -> adapters -> core"
+type = "layers"
+layers = [
+  "scrum_runtime",
+  "scrum_api | scrum_orchestrator | scrum_voice | scrum_intelligence | scrum_delivery",
+  "scrum_adapters",
+  "scrum_core",
+]
+
+[[tool.importlinter.contracts]]
+name = "Services never import each other (they talk through Temporal and the database)"
+type = "independence"
+modules = ["scrum_api", "scrum_orchestrator", "scrum_voice", "scrum_intelligence", "scrum_delivery"]

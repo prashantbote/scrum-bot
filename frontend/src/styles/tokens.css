@@ -1,0 +1,48 @@
+/*
+ * Enterprise Minimal design tokens — the single source of truth for color, shape and elevation.
+ * Contrast (WCAG AA, checked): text-muted on bg 5.0:1, teal-600 on white 5.1:1, blue-600 on white 5.2:1.
+ * teal-400 and text-subtle are decorative / non-essential only.
+ */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-muted: #f9fafb;
+  --border: #e2e6ea;
+  --border-strong: #cbd2d9;
+
+  --text: #1f2933;
+  --text-muted: #5f6b7a;
+  --text-subtle: #8a94a3;
+
+  --teal-50: #e6f4f2;
+  --teal-400: #14b8a6;
+  --teal-600: #0d7c72;
+  --teal-700: #0a655d;
+
+  --blue-50: #eaf1fe;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+
+  --warning: #b45309;
+  --warning-bg: #fef3e2;
+  --danger: #b42318;
+  --danger-bg: #fdecea;
+  --neutral: #4b5563;
+  --neutral-bg: #eef1f4;
+
+  /* Ordered chart palette — never reuse status colors as series colors. */
+  --chart-1: #0d7c72;
+  --chart-2: #2563eb;
+  --chart-3: #14b8a6;
+  --chart-4: #60a5fa;
+  --chart-5: #94a3b8;
+  --chart-6: #0a655d;
+
+  --overlay: rgb(31 41 51 / 0.24);
+
+  --radius-card: 6px;
+  --radius-control: 4px;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-popover: 0 4px 12px rgb(16 24 40 / 0.08);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--blue-600);
+}
